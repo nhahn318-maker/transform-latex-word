@@ -9,7 +9,7 @@ const downloadWordBtn = document.getElementById("downloadWordBtn");
 const clearBtn = document.getElementById("clearBtn");
 const MML2OMML_ESM_URL = "https://cdn.jsdelivr.net/npm/mathml2omml/+esm";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-const BUILD_ID = "2026-04-08-docx-fix4";
+const BUILD_ID = "2026-04-08-docx-fix5";
 let mml2ommlPromise = null;
 
 marked.setOptions({
@@ -749,6 +749,24 @@ function normalizeOmmlInline(omml) {
   return "";
 }
 
+function sanitizeOmmlTextNodes(omml) {
+  if (!omml || typeof omml !== "string") {
+    return "";
+  }
+
+  return omml.replace(/<m:t\b([^>]*)>([\s\S]*?)<\/m:t>/g, (_full, attrs, text) => {
+    const safeText = escapeXmlTextContent(text);
+    return `<m:t${attrs}>${safeText}</m:t>`;
+  });
+}
+
+function escapeXmlTextContent(text) {
+  return String(text)
+    .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function validateAndNormalizeOmml(omml) {
   if (!omml) {
     return "";
@@ -884,7 +902,7 @@ function convertMathMlToOmml(mml2omml, mathMl, isDisplay) {
       return "";
     }
 
-    const omml = ommlRaw.trim();
+    const omml = sanitizeOmmlTextNodes(ommlRaw.trim());
     if (!omml.startsWith("<m:")) {
       return "";
     }
