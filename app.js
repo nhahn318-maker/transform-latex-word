@@ -9,6 +9,7 @@ const downloadWordBtn = document.getElementById("downloadWordBtn");
 const clearBtn = document.getElementById("clearBtn");
 const MML2OMML_ESM_URL = "https://cdn.jsdelivr.net/npm/mathml2omml/+esm";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const BUILD_ID = "2026-04-08-docx-fix3";
 let mml2ommlPromise = null;
 
 marked.setOptions({
@@ -22,6 +23,7 @@ exportDocxBtn.addEventListener("click", exportDocx);
 copyPlainBtn.addEventListener("click", copyPlainText);
 downloadWordBtn.addEventListener("click", downloadWordReadyFile);
 clearBtn.addEventListener("click", clearAll);
+setStatus(`Sẵn sàng (${BUILD_ID}). Dán nội dung vào khung bên trái rồi bấm Parse + Preview.`);
 
 sourceInput.addEventListener("keydown", (event) => {
   const isParseShortcut = (event.ctrlKey || event.metaKey) && event.key === "Enter";
@@ -367,6 +369,8 @@ async function exportDocx() {
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
 </Types>`
     );
 
@@ -408,10 +412,33 @@ async function exportDocx() {
 
     const wordFolder = zip.folder("word");
     wordFolder.file("document.xml", documentXml);
+    wordFolder.file(
+      "styles.xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr/>
+    <w:rPr/>
+  </w:style>
+</w:styles>`
+    );
+    wordFolder.file(
+      "settings.xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
+  <m:mathPr/>
+</w:settings>`
+    );
     wordFolder.folder("_rels").file(
       "document.xml.rels",
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+</Relationships>`
     );
 
     const blob = await zip.generateAsync({ type: "blob", mimeType: DOCX_MIME });
@@ -596,7 +623,7 @@ function buildDocxParagraphXml(line, tokensByPlaceholder, mml2omml, ommlCache) {
   if (onlyDisplayMath) {
     const omml = convertTokenToInlineOmml(pieces[0].token, mml2omml, ommlCache);
     if (omml) {
-      return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><m:oMathPara>${omml}</m:oMathPara></w:p>`;
+      return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr>${omml}</w:p>`;
     }
     return `<w:p>${textRunXml(pieces[0].token.raw)}</w:p>`;
   }
@@ -613,7 +640,7 @@ function buildDocxParagraphXml(line, tokensByPlaceholder, mml2omml, ommlCache) {
 
     const omml = convertTokenToInlineOmml(piece.token, mml2omml, ommlCache);
     if (omml) {
-      content.push(mathRunXml(omml));
+      content.push(omml);
     } else {
       content.push(textRunXml(piece.token.raw));
     }
@@ -737,13 +764,6 @@ function textRunXml(text) {
 
   const normalizedText = text.replace(/\t/g, "    ");
   return `<w:r><w:t xml:space="preserve">${escapeXml(normalizedText)}</w:t></w:r>`;
-}
-
-function mathRunXml(omml) {
-  if (!omml) {
-    return "";
-  }
-  return `<w:r>${omml}</w:r>`;
 }
 
 function buildPlainTextForWord() {
