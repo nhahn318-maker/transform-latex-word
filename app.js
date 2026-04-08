@@ -9,7 +9,7 @@ const downloadWordBtn = document.getElementById("downloadWordBtn");
 const clearBtn = document.getElementById("clearBtn");
 const MML2OMML_ESM_URL = "https://cdn.jsdelivr.net/npm/mathml2omml/+esm";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-const BUILD_ID = "2026-04-08-docx-fix3";
+const BUILD_ID = "2026-04-08-docx-fix4";
 let mml2ommlPromise = null;
 
 marked.setOptions({
