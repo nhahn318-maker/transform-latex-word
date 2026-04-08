@@ -358,6 +358,10 @@ async function exportDocx() {
 
   try {
     const documentXml = buildDocxDocumentXml(normalized, mml2omml);
+    if (!isWellFormedXml(documentXml)) {
+      setStatus("Không tạo được DOCX hợp lệ từ nội dung hiện tại. Hãy thử rút gọn công thức và xuất lại.");
+      return;
+    }
     const zip = new window.JSZip();
 
     zip.file(
@@ -715,9 +719,12 @@ function convertTokenToInlineOmml(token, mml2omml, ommlCache) {
     });
     const mathMl = ensureMathMlNamespace(mathMlRaw);
     const ommlRaw = convertMathMlToOmml(mml2omml, mathMl, false);
-    inlineOmml = normalizeOmmlInline(ommlRaw);
+    inlineOmml = validateAndNormalizeOmml(normalizeOmmlInline(ommlRaw));
+    if (!inlineOmml) {
+      inlineOmml = buildLinearOmml(token.tex);
+    }
   } catch {
-    inlineOmml = "";
+    inlineOmml = buildLinearOmml(token.tex);
   }
 
   ommlCache.set(token.placeholder, inlineOmml);
@@ -740,6 +747,31 @@ function normalizeOmmlInline(omml) {
   }
 
   return "";
+}
+
+function validateAndNormalizeOmml(omml) {
+  if (!omml) {
+    return "";
+  }
+
+  const parser = new DOMParser();
+  const wrapped = `<root xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">${omml}</root>`;
+  const parsed = parser.parseFromString(wrapped, "application/xml");
+  if (parsed.getElementsByTagName("parsererror").length > 0) {
+    return "";
+  }
+
+  const first = parsed.documentElement.firstElementChild;
+  if (!first || first.tagName.toLowerCase() !== "m:omath") {
+    return "";
+  }
+
+  return new XMLSerializer().serializeToString(first);
+}
+
+function buildLinearOmml(tex) {
+  const linear = texToLinearPlain(tex) || tex;
+  return `<m:oMath><m:r><m:t xml:space="preserve">${escapeXml(linear)}</m:t></m:r></m:oMath>`;
 }
 
 function ensureMathMlNamespace(mathMl) {
@@ -926,4 +958,14 @@ function escapeXml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
+}
+
+function isWellFormedXml(xmlText) {
+  if (!xmlText || typeof xmlText !== "string") {
+    return false;
+  }
+
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(xmlText, "application/xml");
+  return parsed.getElementsByTagName("parsererror").length === 0;
 }
