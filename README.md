@@ -36,3 +36,4 @@ Sau đó mở `http://localhost:5500`.
 - Ưu tiên dùng `Xuất DOCX chuẩn` để giữ công thức ổn định nhất trên Word.
 - Lần copy/xuất đầu tiên cần mạng để tải bộ chuyển `MathML -> OMML`.
 - Khi Word chỉ nhận text thuần, app sẽ tự dùng dạng tuyến tính (ví dụ `1/3`) để tránh sai thành `13`.
+- Nếu Word báo lỗi mở `.docx`, hãy xóa file cũ, `Ctrl + F5` rồi xuất lại từ bản web mới nhất.

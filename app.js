@@ -323,7 +323,7 @@ async function downloadWordReadyFile() {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
   setStatus(
     usedOmml
       ? "Đã tải file .doc có OMML. Mở bằng Word để giữ công thức chuẩn."
@@ -364,6 +364,8 @@ async function exportDocx() {
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 </Types>`
     );
@@ -373,7 +375,35 @@ async function exportDocx() {
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
 </Relationships>`
+    );
+
+    const nowIso = new Date().toISOString();
+    zip.folder("docProps").file(
+      "core.xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:dcterms="http://purl.org/dc/terms/"
+                   xmlns:dcmitype="http://purl.org/dc/dcmitype/"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>ChatGPT Formula Export</dc:title>
+  <dc:creator>TransformLatex</dc:creator>
+  <cp:lastModifiedBy>TransformLatex</cp:lastModifiedBy>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${nowIso}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">${nowIso}</dcterms:modified>
+</cp:coreProperties>`
+    );
+
+    zip.folder("docProps").file(
+      "app.xml",
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+            xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  <Application>TransformLatex</Application>
+</Properties>`
     );
 
     const wordFolder = zip.folder("word");
@@ -392,7 +422,7 @@ async function exportDocx() {
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
     setStatus("Đã xuất DOCX chuẩn công thức. Mở file này bằng Word sẽ hiển thị phân số đúng.");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không xác định";
@@ -566,7 +596,7 @@ function buildDocxParagraphXml(line, tokensByPlaceholder, mml2omml, ommlCache) {
   if (onlyDisplayMath) {
     const omml = convertTokenToInlineOmml(pieces[0].token, mml2omml, ommlCache);
     if (omml) {
-      return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr>${omml}</w:p>`;
+      return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><m:oMathPara>${omml}</m:oMathPara></w:p>`;
     }
     return `<w:p>${textRunXml(pieces[0].token.raw)}</w:p>`;
   }
@@ -583,7 +613,7 @@ function buildDocxParagraphXml(line, tokensByPlaceholder, mml2omml, ommlCache) {
 
     const omml = convertTokenToInlineOmml(piece.token, mml2omml, ommlCache);
     if (omml) {
-      content.push(omml);
+      content.push(mathRunXml(omml));
     } else {
       content.push(textRunXml(piece.token.raw));
     }
@@ -707,6 +737,13 @@ function textRunXml(text) {
 
   const normalizedText = text.replace(/\t/g, "    ");
   return `<w:r><w:t xml:space="preserve">${escapeXml(normalizedText)}</w:t></w:r>`;
+}
+
+function mathRunXml(omml) {
+  if (!omml) {
+    return "";
+  }
+  return `<w:r>${omml}</w:r>`;
 }
 
 function buildPlainTextForWord() {
