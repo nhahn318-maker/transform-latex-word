@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Formula Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-shape bg-shape-a"></div>
+  <div class="bg-shape bg-shape-b"></div>
+
+  <main class="app-shell">
+    <header class="hero reveal" style="--delay: 0ms;">
+      <p class="badge">ChatGPT to Word</p>
+      <h1>Dán công thức để copy sang Word không vỡ định dạng</h1>
+      <p class="hero-copy">
+        Dán nội dung từ ChatGPT, bấm parse để đổi LaTeX sang MathML, sau đó copy định dạng Word hoặc tải file mở bằng Word.
+      </p>
+    </header>
+
+    <section class="workspace">
+      <article class="panel reveal" style="--delay: 120ms;">
+        <div class="panel-head">
+          <h2>Nội dung đầu vào</h2>
+          <p>Hỗ trợ: <code>$...$</code>, <code>$$...$$</code>, <code>\(...\)</code>, <code>\[...\]</code>.</p>
+        </div>
+        <textarea id="sourceInput" spellcheck="false" placeholder="Ví dụ:
+Tổng năng lượng:
+$E = mc^2$
+
+Tích phân:
+\[
+\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
+\]
+
+- Ký hiệu >= sẽ giữ nguyên
+- Ký hiệu \alpha, \beta ở trong math sẽ render chuẩn"></textarea>
+        <div class="button-row">
+          <button id="parseBtn" class="btn btn-primary">Parse + Preview</button>
+          <button id="clearBtn" class="btn btn-soft">Xóa</button>
+        </div>
+      </article>
+
+      <article class="panel reveal" style="--delay: 220ms;">
+        <div class="panel-head">
+          <h2>Nội dung sẵn sàng cho Word</h2>
+          <p>Khu vực này có thể chỉnh tay trước khi copy.</p>
+        </div>
+        <div id="preview" class="preview" contenteditable="true"></div>
+        <div class="button-row">
+          <button id="copyWordBtn" class="btn btn-primary">Copy sang Word</button>
+          <button id="exportDocxBtn" class="btn btn-primary">Xuất DOCX chuẩn</button>
+          <button id="copyPlainBtn" class="btn btn-soft">Copy text thuần</button>
+          <button id="downloadWordBtn" class="btn btn-soft">Tải file mở bằng Word</button>
+        </div>
+      </article>
+    </section>
+
+    <footer class="reveal" style="--delay: 320ms;">
+      <p id="status">Sẵn sàng. Dán nội dung vào khung bên trái rồi bấm Parse + Preview.</p>
+      <p class="hint">Mẹo: dùng <code>Ctrl + Enter</code> để parse nhanh.</p>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/temml/dist/temml.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
